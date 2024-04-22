@@ -40,12 +40,28 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 class Tag(models.Model):
     name = models.CharField(max_length=100)
 
+
+class MomentManager(models.Manager):
+    def get_all_moments(self):
+        return self.all()
+    def get_user_moments(self, user_id):
+        return self.filter(author_username=user_id)
+    def delete_moment(self, moment_id):
+        self.filter(id=moment_id).delete()
+    def create_moment(self, author, description, image=None, tags=None):
+        moment = self.create(author=author,description=description,image=image,)
+        if tags:
+            for tag in tags:
+                moment.tag.add(tag)
 class Moment(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     description = models.TextField()
     date_created = models.DateTimeField(auto_now_add=True)
     image = models.CharField(max_length=155,blank=True, null=True)
     tag = models.ManyToManyField(Tag, null=True)
+    
+    objects = MomentManager()
+
 
 class CommentManager(models.Manager):
     def comments_for_moment(self, moment_id):
@@ -58,6 +74,8 @@ class Comment(models.Model):
 
     objects = CommentManager()
 
+
+
 class LikeManager(models.Manager):
     def likes_for_moment(self, moment_id):
         return self.filter(moment_id=moment_id)
@@ -68,7 +86,6 @@ class Like(models.Model):
     moment = models.ForeignKey(Moment, on_delete=models.CASCADE, null=True) 
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True) 
     date_created = models.DateTimeField(auto_now_add=True)
-
     objects = LikeManager()
 
 class Subscription(models.Model):

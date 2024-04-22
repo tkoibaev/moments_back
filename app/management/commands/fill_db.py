@@ -22,12 +22,12 @@ class Command(BaseCommand):
             CustomUser.objects.create_user(username=username, email=email, password=password, bio=bio, avatar=avatar)
         
         # Создание тегов
-        for _ in range(100): # Создание 100 тегов
+        for _ in range(ratio): # Создание 100 тегов
             tag_name = fake.word()
             tag = Tag.objects.create(name=tag_name)   
 
         # Создание моментов с случайным тегом
-        for _ in range(ratio * 10):
+        for _ in range(ratio * 100):
             author = CustomUser.objects.order_by('?').first()
             description = fake.text(max_nb_chars=500) 
             image = fake.image_url(width=155, height=155) 
@@ -36,7 +36,7 @@ class Command(BaseCommand):
             moment.tag.add(tag) 
 
         # Создание комментов
-        for _ in range(ratio * 10):
+        for _ in range(ratio * 1000):
             author = CustomUser.objects.order_by('?').first()
             moment = Moment.objects.order_by('?').first()
             content = fake.text(max_nb_chars=100) 
@@ -53,7 +53,7 @@ class Command(BaseCommand):
             Subscription.objects.create(author=author, subscriber=subscriber)
     
         # Создание лайков для моментов и комментов
-        for _ in range(ratio * 10):
+        for _ in range(ratio * 1000):
             author = CustomUser.objects.order_by('?').first()
             like_object = random.choice([Moment.objects.order_by('?').first(), Comment.objects.order_by('?').first()])
             if isinstance(like_object, Moment):
@@ -63,4 +63,4 @@ class Command(BaseCommand):
                 Like.objects.create(author=author, comment=like_object)
                 self.stdout.write(self.style.SUCCESS(f'Добавлен лайк к комментарию: {like_object.content[:50]}...'))
 
-        self.stdout.write(self.style.SUCCESS(f'База данных успешно наполнена тестовыми данными с коэффициентом {ratio}'))
+        self.stdout.write(self.style.SUCCESS(f'Заполнили)'))
