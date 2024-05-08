@@ -5,7 +5,6 @@ from django.db.models import Q
 from django.db.models import CheckConstraint
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
-
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
         if not username:
@@ -19,6 +18,8 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(username, password, **extra_fields)
+
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=30, unique=True)
@@ -42,17 +43,27 @@ class Tag(models.Model):
 
 
 class MomentManager(models.Manager):
+    
     def get_all_moments(self):
         return self.all()
-    def get_user_moments(self, user_id):
-        return self.filter(author_username=user_id)
+    def get_user_moments(self, username):
+        return self.filter(author__username=username)
+    
     def delete_moment(self, moment_id):
         self.filter(id=moment_id).delete()
+
     def create_moment(self, author, description, image=None, tags=None):
-        moment = self.create(author=author,description=description,image=image,)
+        moment = self.create(author=author,description=description,image=image)
         if tags:
             for tag in tags:
                 moment.tag.add(tag)
+    
+    def get_top_moments(self):
+        return self.all()[:10]
+                
+    def get_likes_for_moment(self, moment_id):
+        likes = Like.objects.likes_for_moment(moment_id)
+        return [like.author for like in likes]
 class Moment(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     description = models.TextField()
@@ -66,6 +77,9 @@ class Moment(models.Model):
 class CommentManager(models.Manager):
     def comments_for_moment(self, moment_id):
         return self.filter(moment_id=moment_id)
+    def get_random_comments_for_moment(self, moment_id):
+        comments = self.filter(moment_id=moment_id)
+        return comments
 class Comment(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE) 
     moment = models.ForeignKey(Moment, on_delete=models.CASCADE) 
@@ -88,10 +102,20 @@ class Like(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     objects = LikeManager()
 
+
+
+class SubscriptionManager(models.Manager):
+    def get_subscribers_for_user(self, username):
+        return self.filter(subscriber__username=username)
+
+    def get_subscriptions_for_user(self, username):
+        return self.filter(author__username=username)
 class Subscription(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='authored_subscriptions')
     subscriber = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='subscribed_to')
     date_created = models.DateTimeField(auto_now_add=True)
+
+    objects = SubscriptionManager()
 
     class Meta:
         constraints = [
@@ -101,13 +125,6 @@ class Subscription(models.Model):
             )
         ]
 
-    @classmethod
-    def get_subscribers_of_user(cls, user):
-        return CustomUser.objects.filter(subscribed_to__author=user)
-
-    @classmethod
-    def get_users_subscribed_to_user(cls, user):
-        return CustomUser.objects.filter(authored_subscriptions__subscriber=user)
 
 
 

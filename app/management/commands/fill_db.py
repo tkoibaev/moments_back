@@ -16,7 +16,7 @@ class Command(BaseCommand):
             username = fake.user_name()
             email = fake.email()
             password = fake.password()
-            bio = fake.text(max_nb_chars=500) 
+            bio = fake.text(max_nb_chars=200) 
             avatar = fake.image_url(width=155, height=155) 
 
             CustomUser.objects.create_user(username=username, email=email, password=password, bio=bio, avatar=avatar)
