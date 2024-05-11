@@ -21,10 +21,11 @@ class CustomUserManager(BaseUserManager):
 
 
 
+
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=30, unique=True)
     email = models.EmailField(unique=True)
-    avatar = models.CharField(max_length=155,null=True, blank=True)
+    avatar = models.ImageField(upload_to="images")
     bio = models.CharField(max_length=200, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

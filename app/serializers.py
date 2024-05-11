@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserActionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ('id', 'username',  'avatar')
+        fields = ('id', 'username', 'avatar')
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
@@ -62,15 +62,17 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = ('id', 'author', 'subscriber', 'date_created')
 
     def get_author(self, obj):
+        author = obj.author
         return {
-            'id': obj.author.id,
-            'username': obj.author.username,
-            'avatar': obj.author.avatar
+            'id': author.id,
+            'username': author.username,
+            'avatar': author.avatar.url if author.avatar else None  
         }
 
     def get_subscriber(self, obj):
+        subscriber = obj.subscriber
         return {
-            'id': obj.subscriber.id,
-            'username': obj.subscriber.username,
-            'avatar': obj.subscriber.avatar
+            'id': subscriber.id,
+            'username': subscriber.username,
+            'avatar': subscriber.avatar.url if subscriber.avatar else None  
         }
