@@ -76,3 +76,24 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'username': subscriber.username,
             'avatar': subscriber.avatar.url if subscriber.avatar else None  
         }
+
+
+class MomentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Moment
+        fields = ['description', 'image']
+
+    def create(self, validated_data):
+        # Извлекаем теги из валидированных данных
+        tags = validated_data.pop('tag', [])
+        print(tags)
+        # Создаем момент без тегов
+        moment = Moment.objects.create(**validated_data)
+        
+        # Добавляем теги к моменту
+        for tag_name in tags:
+            tag, created = Tag.objects.get_or_create(name=tag_name)
+            moment.tags.add(tag)
+        
+        return moment
+

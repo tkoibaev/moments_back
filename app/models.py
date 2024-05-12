@@ -20,8 +20,6 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(username, password, **extra_fields)
 
 
-
-
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=30, unique=True)
     email = models.EmailField(unique=True)
@@ -69,7 +67,7 @@ class Moment(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     description = models.TextField()
     date_created = models.DateTimeField(auto_now_add=True)
-    image = models.CharField(max_length=155,blank=True, null=True)
+    image = models.ImageField(upload_to="images")
     tag = models.ManyToManyField(Tag, null=True)
     
     objects = MomentManager()
@@ -81,6 +79,9 @@ class CommentManager(models.Manager):
     def get_random_comments_for_moment(self, moment_id):
         comments = self.filter(moment_id=moment_id)
         return comments
+    def add_comment(self, author, moment, content):
+        comment = self.create(author=author, moment=moment, content=content)
+        return comment
 class Comment(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE) 
     moment = models.ForeignKey(Moment, on_delete=models.CASCADE) 
@@ -96,6 +97,17 @@ class LikeManager(models.Manager):
         return self.filter(moment_id=moment_id)
     def likes_for_comment(self, comment_id):
         return self.filter(comment_id=comment_id)
+    def toggle_like(self, user, moment):
+        # Пытаемся получить лайк от пользователя на момент
+        try:
+            like = self.get(moment=moment, author=user)
+            # Если лайк найден, удаляем его
+            like.delete()
+            return False
+        except self.model.DoesNotExist:
+            # Если лайк не найден, создаем его
+            self.create(moment=moment, author=user)
+            return True
 class Like(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE) 
     moment = models.ForeignKey(Moment, on_delete=models.CASCADE, null=True) 
@@ -107,10 +119,34 @@ class Like(models.Model):
 
 class SubscriptionManager(models.Manager):
     def get_subscribers_for_user(self, username):
-        return self.filter(subscriber__username=username)
+        return self.filter(author__username=username)
 
     def get_subscriptions_for_user(self, username):
-        return self.filter(author__username=username)
+        return self.filter(subscriber__username=username)
+    
+    def subscribe(self, subscriber, author):
+        # Проверяем, существует ли уже подписка
+        existing_subscription = self.filter(author=author, subscriber=subscriber).first()
+        if existing_subscription:
+            raise ValueError("Already subscribed")
+        # Создаем новую подписку
+        return self.create(author=author, subscriber=subscriber)
+
+    def unsubscribe(self, subscriber, author):
+        # Проверяем, существует ли подписка
+        existing_subscription = self.filter(author=author, subscriber=subscriber).first()
+        if not existing_subscription:
+            raise ValueError("Not subscribed")
+        # Удаляем подписку
+        existing_subscription.delete()
+        return True
+    def toggle_subs(self, subscriber, author):
+        existing_subscription = self.filter(author=author, subscriber=subscriber).first()
+        if existing_subscription:
+            existing_subscription.delete()
+            return True
+        else:
+            return self.create(author=author, subscriber=subscriber)
 class Subscription(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='authored_subscriptions')
     subscriber = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='subscribed_to')

@@ -145,6 +145,20 @@ def update_user_info(request):
         return Response(data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+@api_view(['POST'])
+def add_moment(request):
+    session_id = request.COOKIES.get('session_id', None)
+    username = redis_session_storage.get(session_id).decode('utf-8')
+    user = CustomUser.objects.get(username=username)
+    serializer = MomentCreateSerializer(data=request.data)
+    if serializer.is_valid(raise_exception=True):
+        serializer.save(author=user)  # Установка автора напрямую
+        return Response(serializer.data, status=201)
+    return Response(serializer.errors, status=400)
+
+
 # Получение всех моментов
 @api_view(['Get'])
 def get_moments(request, format=None):
@@ -168,8 +182,11 @@ def get_users(request, format=None):
     return Response(serializer.data)
 
 # Инфа по юзеру
-@api_view(['Get'])
+@api_view(['GET'])
 def get_user(request, name, format=None):
+    session_id = request.COOKIES.get('session_id', None)
+    username = redis_session_storage.get(session_id).decode('utf-8')
+    user_me = CustomUser.objects.get(username=username)
     try:
         user = CustomUser.objects.get(username=name)
         subscriptions = Subscription.objects.get_subscriptions_for_user(name)
@@ -180,17 +197,59 @@ def get_user(request, name, format=None):
         subscriptions_serializer = SubscriptionSerializer(subscriptions, many=True)
         subscribers_serializer = SubscriptionSerializer(subscribers, many=True)
         
+        is_subscribed = Subscription.objects.filter(subscriber=user_me, author=user).exists()
         # Подготовка данных для ответа
         response_data = {
             'user': user_serializer.data,
             'subscriptions': subscriptions_serializer.data,
             'subscribers': subscribers_serializer.data,
+            'is_subscribed' : is_subscribed,
         }
         return Response(response_data)
     except CustomUser.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
 
+@api_view(['POST'])
+def toggle_like(request, moment_id):
+    # Получаем session_id из куки
+    session_id = request.COOKIES.get('session_id', None)
+    username = redis_session_storage.get(session_id).decode('utf-8')
+    user = CustomUser.objects.get(username=username)
+    # Пытаемся получить момент по ID
+    try:
+        moment = Moment.objects.get(id=moment_id)
+    except Moment.DoesNotExist:
+        return Response({'error': 'Moment not found'}, status=404)
+
+    # Тoggles like
+    success = Like.objects.toggle_like(user, moment)
+    if success:
+        return Response({'success': 'Like toggled'})
+    else:
+        return Response({'error': 'Like already exists or was removed'}, status=400)
+
+@api_view(['POST'])
+def add_comment(request, moment_id):
+    # Получаем данные комментария из запроса
+    content = request.data.get('content')
+    if not content:
+        return Response({'error': 'Content is required'}, status=400)
+
+    # Получаем пользователя из куки
+    session_id = request.COOKIES.get('session_id', None)
+    username = redis_session_storage.get(session_id).decode('utf-8')
+    user = CustomUser.objects.get(username=username)
+    print(content)
+    # Пытаемся получить момент по ID
+    try:
+        moment = Moment.objects.get(id=moment_id)
+    except Moment.DoesNotExist:
+        return Response({'error': 'Moment not found'}, status=404)
+
+    # Добавляем комментарий
+    comment = Comment.objects.add_comment(user, moment, content)
+    return Response({'success': 'Comment added', 'comment_id': comment.id})
 
 
 @api_view(['GET'])
@@ -217,12 +276,17 @@ def get_moments_by_tag(request, format=None):
 
 
 
-
-
-# @api_view(['Post'])
-# def post_moment(request, pk, format=None):
-#     serializer = MomentSerializer(data=request.data)
-#     if serializer.is_valid():
-#         serializer.save()
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['POST'])
+def toggle_subscription(request, name):
+    session_id = request.COOKIES.get('session_id', None)
+    username = redis_session_storage.get(session_id).decode('utf-8')
+    subscriber = CustomUser.objects.get(username=username)
+    
+    try:
+        author = CustomUser.objects.get(username=name)
+    except ObjectDoesNotExist:
+        return Response({'error': 'Author not found'}, status=404)
+    
+    # Используем менеджер модели для вызова метода toggle_subs
+    Subscription.objects.toggle_subs(subscriber, author)
+    return Response({'success': 'Subscription status toggled'}, status=200)

@@ -11,18 +11,32 @@ urlpatterns = [
     path('api/logout/', views.logout, name='logout'),#POST - логин
     path('api/user_info/', views.get_user_info, name='get_user_info'),#POST - логин
 
-    path('api/update_user_info/', views.update_user_info, name='update_user_info'),#POST - логин
+    #POST - редактирование профиля 
+    path('api/update_user_info/', views.update_user_info, name='update_user_info'),
 
+    #POST - добавление момента
+    path('api/add_moment/', views.add_moment, name='add_moment'),
 
+    #POST - поставить/убрать лайк
+    path('api/toggle_like/<int:moment_id>/', views.toggle_like, name='toggle_like'),
+    #POST - добавить момент
+    path('api/add_comment/<int:moment_id>/', views.add_comment, name='add_comment'),
 
-    path('api/moments/', views.get_moments, name='all_moments_list'),#GET - список всех моментов - OK
-    path('api/moments_by_user/<str:username>/', views.get_user_moments, name='user_moments_list'),#GET - список всех моментов пользователя -OK
-    # path('api/moments/post/')
-    # path('api/moments/delete/<int:pk>')
+    #GET - список всех моментов - OK    
+    path('api/moments/', views.get_moments, name='all_moments_list'),
+    #GET - список всех моментов пользователя -OK
+    path('api/moments_by_user/<str:username>/', views.get_user_moments, name='user_moments_list'),
 
-    path('api/users/', views.get_users,name='get_users'), #GET - список юзеров с поиском по имени - OK
-    path('api/user/<str:name>/', views.get_user,name='get_user'), #GET - инфа по юзеру и его подписки/подписчики по имени - OK
+    #GET - список юзеров с поиском по имени
+    path('api/users/', views.get_users,name='get_users'),
+    #GET - инфа по юзеру и его подписки/подписчики по имени
+    path('api/user/<str:name>/', views.get_user,name='get_user'), 
+    #GET - списко моментов по тегу
     path('api/moments/tag/', views.get_moments_by_tag, name='get_moments_by_tag'),
+
+    #POST - 
+    path('api/subscribe/<str:name>/', views.toggle_subscription,name='toggle_subscription'), 
+
 
     path('api/comments/<int:pk>/', views.get_moment_comments,name="get_moment_comments") #GET - список комментов к моменту - OK
 ]
